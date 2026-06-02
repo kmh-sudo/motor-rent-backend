@@ -10,6 +10,9 @@ const BikeSchema = new Schema(
       type: String,
       required: true,
     },
+    brand: {
+      type: String,
+    },
     plate: {
       type: String,
       required: true,
@@ -17,6 +20,9 @@ const BikeSchema = new Schema(
     monthlyRate: {
       type: Number,
       required: true,
+    },
+    description: {
+      type: String,
     },
     status: {
       enum: ["available", "rented"],

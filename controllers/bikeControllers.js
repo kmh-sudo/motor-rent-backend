@@ -1,17 +1,57 @@
 import Bike from "../models/Bike.js";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function createBike(req, res) {
   try {
-    const { name, plate, monthlyRate, status } = req.body;
+    const { name, brand, plate, price, description, status } = req.body;
+    const monthlyRate = req.body.monthlyRate ?? price;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Bike image file is required" });
+    }
+
+    if (!name || !plate || monthlyRate === undefined || monthlyRate === "") {
+      return res.status(400).json({ message: "Name, plate, and monthlyRate or price are required" });
+    }
+
+    const fileBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    let uploadResponse;
+
+    try {
+      uploadResponse = await cloudinary.uploader.upload(fileBase64, {
+        folder: "bikes",
+        resource_type: "image",
+      });
+    } catch (err) {
+      return res.status(500).json({ message: `Cloudinary upload failed: ${err.message}` });
+    }
+
     const bike = new Bike({
       name,
+      brand,
       plate,
       monthlyRate,
+      description,
       status,
+      image: {
+        url: uploadResponse.secure_url,
+        public_id: uploadResponse.public_id,
+      },
     });
+
     await bike.save();
     return res.status(201).json(bike);
   } catch (err) {
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+
     return res.status(400).json({ message: err.message });
   }
 }
